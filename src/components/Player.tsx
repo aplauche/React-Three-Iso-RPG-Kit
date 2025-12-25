@@ -26,7 +26,7 @@ export default function Player({ obstacles }: PlayerProps) {
   const lastMovementDirection = useRef<Direction | null>(null);
 
   const SPEED = 0.05;
-  const SNAP_SPEED = 0.2; // Lerp factor for snapping
+  const SNAP_SPEED = 0.05; // Lerp factor for snapping
   const PLAYER_SIZE = new THREE.Vector3(1, 1, 1);
 
   // Update position when initialPosition changes (level transition)

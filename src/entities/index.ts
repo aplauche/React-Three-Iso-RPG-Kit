@@ -8,7 +8,7 @@ import Door from './Door';
 export const ENTITY_SIZES: Record<EntityType, THREE.Vector3> = {
   'enemy': new THREE.Vector3(0.8, 0.8, 0.8),
   'collectible': new THREE.Vector3(0.6, 0.6, 0.6),
-  'door': new THREE.Vector3(1, 0.2, 1),
+  'door': new THREE.Vector3(0.5, 0.2, 0.5), // Smaller collision box - must be in same cell
 };
 
 // Entity collision configurations
