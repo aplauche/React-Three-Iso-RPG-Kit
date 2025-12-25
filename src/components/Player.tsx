@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
@@ -7,7 +7,7 @@ import { GridPosition } from '../types/tile';
 
 interface PlayerProps {
   gridDimensions: { rows: number; cols: number };
-  collidablePositions: Set<string>; // Set of "row,col" strings
+  collidablePositions: Set<string>;
 }
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -18,127 +18,136 @@ export default function Player({ gridDimensions, collidablePositions }: PlayerPr
 
   const meshRef = useRef<THREE.Mesh>(null);
 
-  // Current grid position and target grid position for lerping
-  const currentGridPos = useRef<GridPosition>(playerGridPosition);
-  const targetGridPos = useRef<GridPosition>(playerGridPosition);
+  // Current logical grid position
+  const playerCurrentLocation = useRef<GridPosition>(playerGridPosition);
 
-  // Current world position (for smooth rendering)
-  const currentWorldPos = useRef<THREE.Vector3>(
-    gridToWorld(playerGridPosition, gridDimensions)
-  );
+  // Movement progress: 1 = just started moving, 0 = arrived at destination
+  const [subGridMovement, setSubGridMovement] = useState(0);
 
-  // Movement state
-  const isMoving = useRef(false);
-  const keysHeld = useRef<Direction[]>([]);
+  // Direction of current movement
+  const moveDirection = useRef(null)
 
-  const LERP_SPEED = 0.2;
+  // Keys currently held
+  const keysHeld = useRef([]);
 
-  // Update when level changes (reset position)
-  useEffect(() => {
-    currentGridPos.current = playerGridPosition;
-    targetGridPos.current = playerGridPosition;
-    currentWorldPos.current = gridToWorld(playerGridPosition, gridDimensions);
-    isMoving.current = false;
-  }, [playerGridPosition, gridDimensions]);
+  // Movement speed (how much to decrement subGridMovement per frame)
+  const MOVEMENT_SPEED = 0.01;
 
-  // Keyboard handling
+  // Reset on level change
+  // useEffect(() => {
+  //   playerCurrentLocation.current = playerGridPosition;
+  //   setSubGridMovement(0);
+  //   setMoveDirection([])
+  // }, [playerGridPosition]);
+
+  // Keyboard handlers
   useEffect(() => {
     const keyMap: Record<string, Direction> = {
-      'arrowup': 'up',
-      'w': 'up',
-      'arrowdown': 'down',
-      's': 'down',
-      'arrowleft': 'left',
-      'a': 'left',
-      'arrowright': 'right',
-      'd': 'right',
+      'arrowup': 'up', 'w': 'up',
+      'arrowdown': 'down', 's': 'down',
+      'arrowleft': 'left', 'a': 'left',
+      'arrowright': 'right', 'd': 'right',
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const direction = keyMap[e.key.toLowerCase()];
       if (!direction) return;
 
-      // Remove if already in array, then add to end
-      keysHeld.current = keysHeld.current.filter(d => d !== direction);
-      keysHeld.current.push(direction);
+      // Only process if not already held (prevents repeat)
+      if (keysHeld.current.includes(direction)) return;
+      keysHeld.current.push(direction)
+
+      console.log("new key: " + keysHeld.current)
+
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const direction = keyMap[e.key.toLowerCase()];
       if (!direction) return;
-      keysHeld.current = keysHeld.current.filter(d => d !== direction);
+      keysHeld.current = keysHeld.current.filter(val => val != direction)
+      console.log("removed key: " + keysHeld.current)
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
 
-  // Helper: Check if grid position is valid and not blocked
-  const isValidMove = (gridPos: GridPosition): boolean => {
-    // Check bounds
-    if (gridPos.row < 0 || gridPos.row >= gridDimensions.rows) return false;
-    if (gridPos.col < 0 || gridPos.col >= gridDimensions.cols) return false;
-
-    // Check collisions
-    const posKey = `${gridPos.row},${gridPos.col}`;
-    if (collidablePositions.has(posKey)) return false;
-
-    return true;
+  const isValidCell = (pos: GridPosition): boolean => {
+    if (pos.row < 0 || pos.row >= gridDimensions.rows) return false;
+    if (pos.col < 0 || pos.col >= gridDimensions.cols) return false;
+    return !collidablePositions.has(`${pos.row},${pos.col}`);
   };
 
-  // Helper: Get next grid position based on direction
-  const getNextGridPos = (current: GridPosition, direction: Direction): GridPosition => {
-    switch (direction) {
-      case 'up':
-        return { row: current.row - 1, col: current.col };
-      case 'down':
-        return { row: current.row + 1, col: current.col };
-      case 'left':
-        return { row: current.row, col: current.col - 1 };
-      case 'right':
-        return { row: current.row, col: current.col + 1 };
+  const getNextCell = (from: GridPosition, dir: Direction): GridPosition => {
+    switch (dir) {
+      case 'up': return { row: from.row - 1, col: from.col };
+      case 'down': return { row: from.row + 1, col: from.col };
+      case 'left': return { row: from.row, col: from.col - 1 };
+      case 'right': return { row: from.row, col: from.col + 1 };
     }
   };
 
   useFrame(() => {
     if (!meshRef.current) return;
+    if (!keysHeld.current || keysHeld.current.length < 1) return;
 
-    // If not moving and a key is held, try to start movement
-    if (!isMoving.current && keysHeld.current.length > 0) {
-      const direction = keysHeld.current[keysHeld.current.length - 1];
-      const nextPos = getNextGridPos(currentGridPos.current, direction);
 
-      if (isValidMove(nextPos)) {
-        targetGridPos.current = nextPos;
-        isMoving.current = true;
+    if(subGridMovement == 0){
+      moveDirection.current = keysHeld.current[-1]
+      // Check if the target square is valid
+      if(moveDirection.current){
+        const nextCell = getNextCell(playerCurrentLocation.current, moveDirection.current);
+        if (!isValidCell(nextCell)) return;
+        playerCurrentLocation.current = nextCell;
+        setPlayerGridPosition(nextCell);
+        setSubGridMovement(1);
       }
     }
 
-    // If moving, lerp to target
-    if (isMoving.current) {
-      const targetWorldPos = gridToWorld(targetGridPos.current, gridDimensions);
-      currentWorldPos.current.lerp(targetWorldPos, LERP_SPEED);
+    // If we're moving, decrement subGridMovement
+    if (subGridMovement > 0) {
+      const newSubGridMovement = Math.max(0, subGridMovement - MOVEMENT_SPEED);
+      setSubGridMovement(newSubGridMovement);
 
-      // Check if we've reached the target
-      const distance = currentWorldPos.current.distanceTo(targetWorldPos);
-      if (distance < 0.01) {
-        // Snap to target
-        currentWorldPos.current.copy(targetWorldPos);
-        currentGridPos.current = targetGridPos.current;
-        isMoving.current = false;
-
-        // Update Zustand store
-        setPlayerGridPosition(currentGridPos.current);
+      // If we just finished moving, clear direction
+      if (newSubGridMovement === 0) {
+        moveDirection.current = null
       }
     }
 
-    // Update mesh position
-    meshRef.current.position.copy(currentWorldPos.current);
+    // Calculate visual position
+    // Visual position = current location - (movement offset in the direction we came from)
+    const targetPos = gridToWorld(playerCurrentLocation.current, gridDimensions);
+
+    if (subGridMovement > 0 && moveDirection.current) {
+      // Apply offset based on the direction we're moving
+      const offset = new THREE.Vector3();
+      switch (moveDirection.current) {
+        case 'up':
+          // Moving up (row decreases): came from higher row (higher z)
+          offset.set(0, 0, 1).multiplyScalar(subGridMovement);
+          break;
+        case 'down':
+          // Moving down (row increases): came from lower row (lower z)
+          offset.set(0, 0, -1).multiplyScalar(subGridMovement);
+          break;
+        case 'left':
+          // Moving left (col decreases): came from higher col (higher x)
+          offset.set(1, 0, 0).multiplyScalar(subGridMovement);
+          break;
+        case 'right':
+          // Moving right (col increases): came from lower col (lower x)
+          offset.set(-1, 0, 0).multiplyScalar(subGridMovement);
+          break;
+      }
+      meshRef.current.position.copy(targetPos).sub(offset);
+    } else {
+      meshRef.current.position.copy(targetPos);
+    }
   });
 
   return (
