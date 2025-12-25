@@ -15,6 +15,7 @@ type Direction = 'up' | 'down' | 'left' | 'right';
 export default function Player({ gridDimensions, collidablePositions }: PlayerProps) {
   const playerGridPosition = useGameStore((state) => state.playerGridPosition);
   const setPlayerGridPosition = useGameStore((state) => state.setPlayerGridPosition);
+  const setPlayerVisualPosition = useGameStore((state) => state.setPlayerVisualPosition);
 
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -139,6 +140,9 @@ export default function Player({ gridDimensions, collidablePositions }: PlayerPr
     } else {
       meshRef.current.position.copy(targetPos);
     }
+
+    // Update visual position in store for camera tracking
+    setPlayerVisualPosition(meshRef.current.position.clone());
   });
 
   return (

@@ -1,11 +1,16 @@
 import { create } from 'zustand';
 import { GridPosition } from '../types/tile';
 import { levels } from '../levels';
+import * as THREE from 'three';
 
 interface GameState {
   // Player state (grid-based)
   playerGridPosition: GridPosition;
   setPlayerGridPosition: (position: GridPosition) => void;
+
+  // Player visual position (for camera tracking)
+  playerVisualPosition: THREE.Vector3;
+  setPlayerVisualPosition: (position: THREE.Vector3) => void;
 
   // Game state
   currentLevelId: string;
@@ -24,6 +29,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   // Initial player state (grid position)
   playerGridPosition: { row: 1, col: 1 }, // demo1 spawn point
   setPlayerGridPosition: (position) => set({ playerGridPosition: position }),
+
+  // Initial visual position
+  playerVisualPosition: new THREE.Vector3(0, 0.5, 0),
+  setPlayerVisualPosition: (position) => set({ playerVisualPosition: position }),
 
   // Initial game state
   currentLevelId: 'demo1',
