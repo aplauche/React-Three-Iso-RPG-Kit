@@ -20,7 +20,13 @@ export default function Player({ obstacles }: PlayerProps) {
   // Track keys in order pressed (last = current direction)
   const keysHeld = useRef<Direction[]>([]);
 
+  // Grid snapping state
+  const isSnapping = useRef(false);
+  const snapTarget = useRef<THREE.Vector3 | null>(null);
+  const lastMovementDirection = useRef<Direction | null>(null);
+
   const SPEED = 0.05;
+  const SNAP_SPEED = 0.2; // Lerp factor for snapping
   const PLAYER_SIZE = new THREE.Vector3(1, 1, 1);
 
   // Update position when initialPosition changes (level transition)
@@ -77,6 +83,11 @@ export default function Player({ obstacles }: PlayerProps) {
     const activeDirection = keysHeld.current[keysHeld.current.length - 1];
 
     if (activeDirection) {
+      // Active movement - cancel any snapping
+      isSnapping.current = false;
+      snapTarget.current = null;
+      lastMovementDirection.current = activeDirection;
+
       // Calculate velocity based on active direction
       const velocity = new THREE.Vector3();
 
@@ -109,6 +120,45 @@ export default function Player({ obstacles }: PlayerProps) {
       // Only update position if no collision
       if (!wouldCollide) {
         position.current.copy(newPosition);
+      }
+    } else if (lastMovementDirection.current && !isSnapping.current) {
+      // Keys released, initiate snap to next grid cell in last direction
+      isSnapping.current = true;
+
+      // Calculate snap target (always forward in last direction)
+      const target = position.current.clone();
+
+      switch (lastMovementDirection.current) {
+        case 'up':
+          target.z = Math.floor(position.current.z);
+          break;
+        case 'down':
+          target.z = Math.ceil(position.current.z);
+          break;
+        case 'left':
+          target.x = Math.floor(position.current.x);
+          break;
+        case 'right':
+          target.x = Math.ceil(position.current.x);
+          break;
+      }
+
+      snapTarget.current = target;
+    }
+
+    // Handle snapping
+    if (isSnapping.current && snapTarget.current) {
+      const distance = position.current.distanceTo(snapTarget.current);
+
+      if (distance < 0.01) {
+        // Snap complete
+        position.current.copy(snapTarget.current);
+        isSnapping.current = false;
+        snapTarget.current = null;
+        lastMovementDirection.current = null;
+      } else {
+        // Lerp to target
+        position.current.lerp(snapTarget.current, SNAP_SPEED);
       }
     }
 
