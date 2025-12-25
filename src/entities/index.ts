@@ -1,21 +1,13 @@
-import * as THREE from 'three';
 import { EntityType } from '../types/level';
 import Enemy from './Enemy';
 import Collectible from './Collectible';
 import Door from './Door';
 
-// Entity size configurations
-export const ENTITY_SIZES: Record<EntityType, THREE.Vector3> = {
-  'enemy': new THREE.Vector3(1, 1, 1),
-  'collectible': new THREE.Vector3(0.6, 0.6, 0.6),
-  'door': new THREE.Vector3(0.5, 0.2, 0.5), // Smaller collision box - must be in same cell
-};
-
-// Entity collision configurations
+// Entity collision configurations (which entities block player movement)
 export const ENTITY_COLLIDABLE: Record<EntityType, boolean> = {
-  'enemy': true,    // Enemies block movement
+  'enemy': true,         // Enemies block movement
   'collectible': false,  // Can walk through collectibles
-  'door': false,    // Can walk through doors
+  'door': false,         // Can walk through doors
 };
 
 // Entity component mapping
@@ -30,17 +22,12 @@ export function getEntityComponent(type: EntityType) {
   return ENTITY_COMPONENTS[type];
 }
 
-// Get entity size by type
-export function getEntitySize(type: EntityType): THREE.Vector3 {
-  return ENTITY_SIZES[type].clone();
-}
-
-// Check if entity is collidable
+// Check if entity is collidable (blocks player movement)
 export function isEntityCollidable(type: EntityType): boolean {
   return ENTITY_COLLIDABLE[type];
 }
 
-// Generate entity ID from definition
+// Generate entity ID from grid position
 export function generateEntityId(type: EntityType, row: number, col: number): string {
   return `${type}-${row}-${col}`;
 }

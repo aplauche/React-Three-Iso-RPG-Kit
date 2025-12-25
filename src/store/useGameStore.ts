@@ -1,13 +1,11 @@
 import { create } from 'zustand';
-import * as THREE from 'three';
+import { GridPosition } from '../types/tile';
 import { levels } from '../levels';
-import { gridToWorld } from '../utils/coordinateConversion';
 
 interface GameState {
-  // Player state
-  playerPosition: THREE.Vector3;
-  playerSize: THREE.Vector3;
-  setPlayerPosition: (position: THREE.Vector3) => void;
+  // Player state (grid-based)
+  playerGridPosition: GridPosition;
+  setPlayerGridPosition: (position: GridPosition) => void;
 
   // Game state
   currentLevelId: string;
@@ -23,10 +21,9 @@ interface GameState {
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
-  // Initial player state
-  playerPosition: new THREE.Vector3(0, 0.5, 0),
-  playerSize: new THREE.Vector3(1, 1, 1),
-  setPlayerPosition: (position) => set({ playerPosition: position }),
+  // Initial player state (grid position)
+  playerGridPosition: { row: 1, col: 1 }, // demo1 spawn point
+  setPlayerGridPosition: (position) => set({ playerGridPosition: position }),
 
   // Initial game state
   currentLevelId: 'demo1',
@@ -44,7 +41,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   resetCollectedEntities: () => set({ collectedEntities: new Set() }),
 
-  // Complex action: transition to a new level
+  // Transition to a new level
   transitionToLevel: (levelId: string) => {
     const targetLevel = levels[levelId];
     if (!targetLevel) {
@@ -52,18 +49,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
-    const gridDimensions = {
-      rows: targetLevel.groundGrid.length,
-      cols: targetLevel.groundGrid[0]?.length || 0,
-    };
-
-    // Calculate new player spawn position
-    const newPosition = gridToWorld(targetLevel.spawnPoint, gridDimensions);
-    newPosition.y = 0.5; // Player height
-
     set({
       currentLevelId: levelId,
-      playerPosition: newPosition,
+      playerGridPosition: targetLevel.spawnPoint, // Directly use grid position
       collectedEntities: new Set(), // Reset collected items for new level
     });
 

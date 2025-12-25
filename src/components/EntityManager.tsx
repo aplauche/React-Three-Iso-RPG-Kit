@@ -1,12 +1,9 @@
 import { useMemo } from 'react';
-import * as THREE from 'three';
 import { EntityDefinition } from '../types/level';
 import { EntityInstance } from '../types/entity';
 import { gridToWorld } from '../utils/coordinateConversion';
-import { GameObject } from '../utils/collision';
 import {
   getEntityComponent,
-  getEntitySize,
   isEntityCollidable,
   generateEntityId
 } from '../entities';
@@ -27,10 +24,6 @@ export default function EntityManager({
 
     entities.forEach(entityDef => {
       const worldPosition = gridToWorld(entityDef.position, gridDimensions);
-      const size = getEntitySize(entityDef.type);
-
-      // Adjust Y position based on entity type height
-      worldPosition.y = size.y / 2;
 
       const entityId = generateEntityId(
         entityDef.type,
@@ -43,7 +36,7 @@ export default function EntityManager({
         type: entityDef.type,
         position: worldPosition,
         gridPosition: entityDef.position,
-        size,
+        size: { x: 1, y: 1, z: 1 }, // All entities are 1x1 grid cells
         isCollidable: isEntityCollidable(entityDef.type),
         metadata: entityDef.metadata,
       });
@@ -62,7 +55,6 @@ export default function EntityManager({
             key={entity.id}
             id={entity.id}
             position={entity.position}
-            size={entity.size}
             gridPosition={entity.gridPosition}
             metadata={entity.metadata}
           />
@@ -73,31 +65,22 @@ export default function EntityManager({
 }
 
 /**
- * Helper hook to get collision objects from entities
+ * Helper hook to get collidable grid positions
+ * Returns a Set of "row,col" strings for collision checking
  */
-export function useEntityCollisionObjects(
-  entities: EntityDefinition[],
-  gridDimensions: { rows: number; cols: number }
-): GameObject[] {
+export function useCollidablePositions(
+  entities: EntityDefinition[]
+): Set<string> {
   return useMemo(() => {
-    const objects: GameObject[] = [];
+    const positions = new Set<string>();
 
     entities.forEach(entityDef => {
-      // Only include collidable entities
-      if (!isEntityCollidable(entityDef.type)) return;
-
-      const worldPosition = gridToWorld(entityDef.position, gridDimensions);
-      const size = getEntitySize(entityDef.type);
-
-      // Adjust Y position
-      worldPosition.y = size.y / 2;
-
-      objects.push({
-        position: worldPosition,
-        size,
-      });
+      if (isEntityCollidable(entityDef.type)) {
+        const posKey = `${entityDef.position.row},${entityDef.position.col}`;
+        positions.add(posKey);
+      }
     });
 
-    return objects;
-  }, [entities, gridDimensions]);
+    return positions;
+  }, [entities]);
 }

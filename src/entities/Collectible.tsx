@@ -1,34 +1,32 @@
 import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
 import { EntityProps } from '../types/entity';
 import { useGameStore } from '../store/useGameStore';
-import { checkAABBCollision, createAABB } from '../utils/collision';
 
 export default function Collectible({
   id,
   position,
-  size,
+  gridPosition,
   metadata
 }: EntityProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [collected, setCollected] = useState(false);
   const color = metadata?.color || 'gold';
 
-  // Subscribe to player state
-  const playerPosition = useGameStore((state) => state.playerPosition);
-  const playerSize = useGameStore((state) => state.playerSize);
+  // Subscribe to player grid position and game actions
+  const playerGridPosition = useGameStore((state) => state.playerGridPosition);
   const addScore = useGameStore((state) => state.addScore);
   const collectEntity = useGameStore((state) => state.collectEntity);
 
   useFrame((state) => {
     if (collected) return;
 
-    // Self-contained intersection handling
-    const playerBox = createAABB({ position: playerPosition, size: playerSize });
-    const entityBox = createAABB({ position, size });
+    // Simple grid-based collision check
+    const isPlayerOnCollectible =
+      playerGridPosition.row === gridPosition.row &&
+      playerGridPosition.col === gridPosition.col;
 
-    if (checkAABBCollision(playerBox, entityBox)) {
+    if (isPlayerOnCollectible) {
       const points = metadata?.points || 10;
       addScore(points);
       collectEntity(id);

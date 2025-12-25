@@ -1,22 +1,15 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
 import { EntityProps } from '../types/entity';
 import { useGameStore } from '../store/useGameStore';
-import { checkAABBCollision, createAABB } from '../utils/collision';
 
-export default function Door({
-  position,
-  size,
-  metadata
-}: EntityProps) {
+export default function Door({ position, gridPosition, metadata }: EntityProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const color = metadata?.color || 'purple';
   const lastTransitionTime = useRef(0);
 
-  // Subscribe to player state and transition action
-  const playerPosition = useGameStore((state) => state.playerPosition);
-  const playerSize = useGameStore((state) => state.playerSize);
+  // Subscribe to player grid position and transition action
+  const playerGridPosition = useGameStore((state) => state.playerGridPosition);
   const transitionToLevel = useGameStore((state) => state.transitionToLevel);
 
   useFrame((state) => {
@@ -26,14 +19,15 @@ export default function Door({
       meshRef.current.scale.set(1, scale, 1);
     }
 
-    // Self-contained intersection handling
-    const playerBox = createAABB({ position: playerPosition, size: playerSize });
-    const entityBox = createAABB({ position, size });
+    // Simple grid-based collision check
+    const isPlayerOnDoor =
+      playerGridPosition.row === gridPosition.row &&
+      playerGridPosition.col === gridPosition.col;
 
-    if (checkAABBCollision(playerBox, entityBox)) {
+    if (isPlayerOnDoor) {
       // Debounce level transitions (prevent rapid re-triggering)
       const now = Date.now();
-      if (now - lastTransitionTime.current < 1000) return; // 1 second cooldown
+      if (now - lastTransitionTime.current < 1000) return;
 
       const targetLevel = metadata?.targetLevel;
       if (targetLevel) {

@@ -1,22 +1,15 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
 import { EntityProps } from '../types/entity';
 import { useGameStore } from '../store/useGameStore';
-import { checkAABBCollision, createAABB } from '../utils/collision';
 
-export default function Enemy({
-  position,
-  size,
-  metadata
-}: EntityProps) {
+export default function Enemy({ position, gridPosition, metadata }: EntityProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const color = metadata?.color || 'darkred';
   const lastHitTime = useRef(0);
 
-  // Subscribe to player state
-  const playerPosition = useGameStore((state) => state.playerPosition);
-  const playerSize = useGameStore((state) => state.playerSize);
+  // Subscribe to player grid position
+  const playerGridPosition = useGameStore((state) => state.playerGridPosition);
 
   useFrame((state) => {
     // Subtle bobbing animation
@@ -24,21 +17,21 @@ export default function Enemy({
       meshRef.current.position.y = position.y + Math.sin(state.clock.elapsedTime * 3) * 0.05;
     }
 
-    // Self-contained intersection handling
-    const playerBox = createAABB({ position: playerPosition, size: playerSize });
-    const entityBox = createAABB({ position, size });
+    // Simple grid-based collision check
+    const isPlayerOnEnemy =
+      playerGridPosition.row === gridPosition.row &&
+      playerGridPosition.col === gridPosition.col;
 
-    if (checkAABBCollision(playerBox, entityBox)) {
+    if (isPlayerOnEnemy) {
       // Debounce damage (prevent rapid repeated hits)
       const now = Date.now();
-      if (now - lastHitTime.current < 1000) return; // 1 second cooldown
+      if (now - lastHitTime.current < 1000) return;
 
       const damage = metadata?.damage || 1;
       lastHitTime.current = now;
 
       console.log(`Hit by enemy! -${damage} health`);
       // TODO: Implement health system in useGameStore
-      // damagePlayer(damage);
     }
   });
 

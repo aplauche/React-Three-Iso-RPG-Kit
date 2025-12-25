@@ -1,42 +1,47 @@
 import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { checkCollisionWithObstacles, GameObject } from '../utils/collision';
 import { useGameStore } from '../store/useGameStore';
+import { gridToWorld } from '../utils/coordinateConversion';
+import { GridPosition } from '../types/tile';
 
 interface PlayerProps {
-  obstacles: GameObject[];
+  gridDimensions: { rows: number; cols: number };
+  collidablePositions: Set<string>; // Set of "row,col" strings
 }
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
-export default function Player({ obstacles }: PlayerProps) {
-  const initialPosition = useGameStore((state) => state.playerPosition);
-  const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
+export default function Player({ gridDimensions, collidablePositions }: PlayerProps) {
+  const playerGridPosition = useGameStore((state) => state.playerGridPosition);
+  const setPlayerGridPosition = useGameStore((state) => state.setPlayerGridPosition);
 
   const meshRef = useRef<THREE.Mesh>(null);
-  const position = useRef(initialPosition.clone());
 
-  // Track keys in order pressed (last = current direction)
+  // Current grid position and target grid position for lerping
+  const currentGridPos = useRef<GridPosition>(playerGridPosition);
+  const targetGridPos = useRef<GridPosition>(playerGridPosition);
+
+  // Current world position (for smooth rendering)
+  const currentWorldPos = useRef<THREE.Vector3>(
+    gridToWorld(playerGridPosition, gridDimensions)
+  );
+
+  // Movement state
+  const isMoving = useRef(false);
   const keysHeld = useRef<Direction[]>([]);
 
-  // Grid snapping state
-  const isSnapping = useRef(false);
-  const snapTarget = useRef<THREE.Vector3 | null>(null);
-  const lastMovementDirection = useRef<Direction | null>(null);
+  const LERP_SPEED = 0.2;
 
-  const SPEED = 0.05;
-  const SNAP_SPEED = 0.05; // Lerp factor for snapping
-  const PLAYER_SIZE = new THREE.Vector3(1, 1, 1);
-
-  // Update position when initialPosition changes (level transition)
+  // Update when level changes (reset position)
   useEffect(() => {
-    position.current.copy(initialPosition);
-    if (meshRef.current) {
-      meshRef.current.position.copy(initialPosition);
-    }
-  }, [initialPosition]);
+    currentGridPos.current = playerGridPosition;
+    targetGridPos.current = playerGridPosition;
+    currentWorldPos.current = gridToWorld(playerGridPosition, gridDimensions);
+    isMoving.current = false;
+  }, [playerGridPosition, gridDimensions]);
 
+  // Keyboard handling
   useEffect(() => {
     const keyMap: Record<string, Direction> = {
       'arrowup': 'up',
@@ -53,17 +58,14 @@ export default function Player({ obstacles }: PlayerProps) {
       const direction = keyMap[e.key.toLowerCase()];
       if (!direction) return;
 
-      // Remove if already in array (to avoid duplicates)
+      // Remove if already in array, then add to end
       keysHeld.current = keysHeld.current.filter(d => d !== direction);
-      // Add to end (most recent)
       keysHeld.current.push(direction);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const direction = keyMap[e.key.toLowerCase()];
       if (!direction) return;
-
-      // Remove from array
       keysHeld.current = keysHeld.current.filter(d => d !== direction);
     };
 
@@ -76,116 +78,71 @@ export default function Player({ obstacles }: PlayerProps) {
     };
   }, []);
 
+  // Helper: Check if grid position is valid and not blocked
+  const isValidMove = (gridPos: GridPosition): boolean => {
+    // Check bounds
+    if (gridPos.row < 0 || gridPos.row >= gridDimensions.rows) return false;
+    if (gridPos.col < 0 || gridPos.col >= gridDimensions.cols) return false;
+
+    // Check collisions
+    const posKey = `${gridPos.row},${gridPos.col}`;
+    if (collidablePositions.has(posKey)) return false;
+
+    return true;
+  };
+
+  // Helper: Get next grid position based on direction
+  const getNextGridPos = (current: GridPosition, direction: Direction): GridPosition => {
+    switch (direction) {
+      case 'up':
+        return { row: current.row - 1, col: current.col };
+      case 'down':
+        return { row: current.row + 1, col: current.col };
+      case 'left':
+        return { row: current.row, col: current.col - 1 };
+      case 'right':
+        return { row: current.row, col: current.col + 1 };
+    }
+  };
+
   useFrame(() => {
     if (!meshRef.current) return;
 
-    // Get current direction (last key in array)
-    const activeDirection = keysHeld.current[keysHeld.current.length - 1];
+    // If not moving and a key is held, try to start movement
+    if (!isMoving.current && keysHeld.current.length > 0) {
+      const direction = keysHeld.current[keysHeld.current.length - 1];
+      const nextPos = getNextGridPos(currentGridPos.current, direction);
 
-    if (activeDirection) {
-      // Active movement - cancel any snapping
-      isSnapping.current = false;
-      snapTarget.current = null;
-      lastMovementDirection.current = activeDirection;
-
-      // Calculate velocity based on active direction
-      const velocity = new THREE.Vector3();
-
-      switch (activeDirection) {
-        case 'up':
-          velocity.z = -SPEED;
-          break;
-        case 'down':
-          velocity.z = SPEED;
-          break;
-        case 'left':
-          velocity.x = -SPEED;
-          break;
-        case 'right':
-          velocity.x = SPEED;
-          break;
+      if (isValidMove(nextPos)) {
+        targetGridPos.current = nextPos;
+        isMoving.current = true;
       }
-
-      // Calculate new position
-      const newPosition = position.current.clone().add(velocity);
-
-      // Check for collisions
-      const playerObject: GameObject = {
-        position: newPosition,
-        size: PLAYER_SIZE,
-      };
-
-      const wouldCollide = checkCollisionWithObstacles(playerObject, obstacles);
-
-      // Only update position if no collision
-      if (!wouldCollide) {
-        position.current.copy(newPosition);
-      }
-    } else if (lastMovementDirection.current && !isSnapping.current) {
-      // Keys released, initiate snap to next grid cell in last direction
-      isSnapping.current = true;
-
-      // Calculate snap target (always forward in last direction)
-      const target = position.current.clone();
-
-      switch (lastMovementDirection.current) {
-        case 'up':
-          target.z = Math.floor(position.current.z);
-          break;
-        case 'down':
-          target.z = Math.ceil(position.current.z);
-          break;
-        case 'left':
-          target.x = Math.floor(position.current.x);
-          break;
-        case 'right':
-          target.x = Math.ceil(position.current.x);
-          break;
-      }
-
-      // Disable snapping if blocked
-      const playerObject: GameObject = {
-        position: target,
-        size: PLAYER_SIZE,
-      };
-      const wouldCollide = checkCollisionWithObstacles(playerObject, obstacles);
-
-      if(wouldCollide){
-        isSnapping.current = false;
-        return
-      }
-      
-      snapTarget.current = target;
-
     }
 
+    // If moving, lerp to target
+    if (isMoving.current) {
+      const targetWorldPos = gridToWorld(targetGridPos.current, gridDimensions);
+      currentWorldPos.current.lerp(targetWorldPos, LERP_SPEED);
 
-
-    // Handle snapping
-    if (isSnapping.current && snapTarget.current) {
-      const distance = position.current.distanceTo(snapTarget.current);
-
+      // Check if we've reached the target
+      const distance = currentWorldPos.current.distanceTo(targetWorldPos);
       if (distance < 0.01) {
-        // Snap complete
-        position.current.copy(snapTarget.current);
-        isSnapping.current = false;
-        snapTarget.current = null;
-        lastMovementDirection.current = null;
-      } else {
-        // Lerp to target
-        position.current.lerp(snapTarget.current, SNAP_SPEED);
+        // Snap to target
+        currentWorldPos.current.copy(targetWorldPos);
+        currentGridPos.current = targetGridPos.current;
+        isMoving.current = false;
+
+        // Update Zustand store
+        setPlayerGridPosition(currentGridPos.current);
       }
     }
 
     // Update mesh position
-    meshRef.current.position.copy(position.current);
-
-    // Update global store
-    setPlayerPosition(position.current);
+    meshRef.current.position.copy(currentWorldPos.current);
   });
 
   return (
-    <mesh ref={meshRef} position={initialPosition.toArray()} castShadow>
+    <mesh ref={meshRef} castShadow>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial color="blue" />
     </mesh>

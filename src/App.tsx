@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import Player from './components/Player';
 import Camera from './components/Camera';
 import GroundMap from './components/GroundMap';
-import EntityManager, { useEntityCollisionObjects } from './components/EntityManager';
+import EntityManager, { useCollidablePositions } from './components/EntityManager';
 import { levels } from './levels';
 import { useGameStore } from './store/useGameStore';
 import { generateEntityId } from './entities';
@@ -30,8 +30,8 @@ function App() {
     });
   }, [currentLevel.entities, collectedEntities]);
 
-  // Get collision objects from entities
-  const obstacles = useEntityCollisionObjects(activeEntities, gridDimensions);
+  // Get collidable grid positions (Set of "row,col" strings)
+  const collidablePositions = useCollidablePositions(activeEntities);
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
@@ -78,7 +78,10 @@ function App() {
         <GroundMap groundGrid={currentLevel.groundGrid} />
 
         {/* Player */}
-        <Player obstacles={obstacles} />
+        <Player
+          gridDimensions={gridDimensions}
+          collidablePositions={collidablePositions}
+        />
 
         {/* Entities (game objects with collision/behavior) */}
         <EntityManager

@@ -21,9 +21,8 @@ export interface EntityInstance {
 // Props for entity React components
 export interface EntityProps {
   id: string;                      // Entity ID for tracking
-  position: THREE.Vector3;
-  gridPosition: GridPosition;
-  size: THREE.Vector3;             // Collision box size
+  position: THREE.Vector3;         // 3D world position for rendering
+  gridPosition: GridPosition;      // 2D grid position for collision
   metadata?: Record<string, any>;
 }
 
