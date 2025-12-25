@@ -143,8 +143,23 @@ export default function Player({ obstacles }: PlayerProps) {
           break;
       }
 
+      // Disable snapping if blocked
+      const playerObject: GameObject = {
+        position: target,
+        size: PLAYER_SIZE,
+      };
+      const wouldCollide = checkCollisionWithObstacles(playerObject, obstacles);
+
+      if(wouldCollide){
+        isSnapping.current = false;
+        return
+      }
+      
       snapTarget.current = target;
+
     }
+
+
 
     // Handle snapping
     if (isSnapping.current && snapTarget.current) {
