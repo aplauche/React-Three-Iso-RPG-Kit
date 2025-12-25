@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GridPosition } from '../types/tile';
+import { GridPosition } from '../types/entity';
 import { levels } from '../levels';
 import * as THREE from 'three';
 

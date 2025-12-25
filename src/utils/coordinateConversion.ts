@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GridPosition } from '../types/tile';
+import { GridPosition } from '../types/entity';
 
 /**
  * Configuration for grid-to-world conversion

@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
 import { gridToWorld } from '../utils/coordinateConversion';
-import { GridPosition } from '../types/tile';
+import { GridPosition } from '../types/entity';
 
 interface PlayerProps {
   gridDimensions: { rows: number; cols: number };
