@@ -93,55 +93,47 @@ export default function Player({ gridDimensions, collidablePositions }: PlayerPr
 
   useFrame(() => {
     if (!meshRef.current) return;
-    if (!keysHeld.current || keysHeld.current.length < 1) return;
 
+    // Check if we can start a new movement
+    if (subGridMovement === 0 && keysHeld.current.length > 0) {
+      const direction = keysHeld.current[keysHeld.current.length - 1];
+      const nextCell = getNextCell(playerCurrentLocation.current, direction);
 
-    if(subGridMovement == 0){
-      moveDirection.current = keysHeld.current[-1]
-      // Check if the target square is valid
-      if(moveDirection.current){
-        const nextCell = getNextCell(playerCurrentLocation.current, moveDirection.current);
-        if (!isValidCell(nextCell)) return;
+      if (isValidCell(nextCell)) {
         playerCurrentLocation.current = nextCell;
         setPlayerGridPosition(nextCell);
+        moveDirection.current = direction;
         setSubGridMovement(1);
       }
     }
 
-    // If we're moving, decrement subGridMovement
+    // Always decrement movement if we're moving
     if (subGridMovement > 0) {
       const newSubGridMovement = Math.max(0, subGridMovement - MOVEMENT_SPEED);
       setSubGridMovement(newSubGridMovement);
 
-      // If we just finished moving, clear direction
       if (newSubGridMovement === 0) {
-        moveDirection.current = null
+        moveDirection.current = null;
       }
     }
 
-    // Calculate visual position
-    // Visual position = current location - (movement offset in the direction we came from)
+    // Always update visual position
     const targetPos = gridToWorld(playerCurrentLocation.current, gridDimensions);
 
     if (subGridMovement > 0 && moveDirection.current) {
-      // Apply offset based on the direction we're moving
       const offset = new THREE.Vector3();
       switch (moveDirection.current) {
         case 'up':
-          // Moving up (row decreases): came from higher row (higher z)
-          offset.set(0, 0, 1).multiplyScalar(subGridMovement);
-          break;
-        case 'down':
-          // Moving down (row increases): came from lower row (lower z)
           offset.set(0, 0, -1).multiplyScalar(subGridMovement);
           break;
+        case 'down':
+          offset.set(0, 0, 1).multiplyScalar(subGridMovement);
+          break;
         case 'left':
-          // Moving left (col decreases): came from higher col (higher x)
-          offset.set(1, 0, 0).multiplyScalar(subGridMovement);
+          offset.set(-1, 0, 0).multiplyScalar(subGridMovement);
           break;
         case 'right':
-          // Moving right (col increases): came from lower col (lower x)
-          offset.set(-1, 0, 0).multiplyScalar(subGridMovement);
+          offset.set(1, 0, 0).multiplyScalar(subGridMovement);
           break;
       }
       meshRef.current.position.copy(targetPos).sub(offset);
