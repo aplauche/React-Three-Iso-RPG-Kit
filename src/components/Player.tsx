@@ -2,18 +2,15 @@ import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { checkCollisionWithObstacles, GameObject } from '../utils/collision';
+import { useGameStore } from '../store/useGameStore';
 
 interface PlayerProps {
   obstacles: GameObject[];
-  onPositionChange?: (position: THREE.Vector3) => void;
-  initialPosition?: THREE.Vector3;
 }
 
-export default function Player({
-  obstacles,
-  onPositionChange,
-  initialPosition = new THREE.Vector3(0, 0.5, 0)
-}: PlayerProps) {
+export default function Player({ obstacles }: PlayerProps) {
+  const initialPosition = useGameStore((state) => state.playerPosition);
+  const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
   const meshRef = useRef<THREE.Mesh>(null);
   const keysPressed = useRef<Set<string>>(new Set());
   const velocity = useRef(new THREE.Vector3());
@@ -87,10 +84,8 @@ export default function Player({
     // Update mesh position
     meshRef.current.position.copy(position.current);
 
-    // Notify parent of position change for camera tracking
-    if (onPositionChange) {
-      onPositionChange(position.current);
-    }
+    // Update global store for camera tracking and entity intersections
+    setPlayerPosition(position.current);
   });
 
   return (

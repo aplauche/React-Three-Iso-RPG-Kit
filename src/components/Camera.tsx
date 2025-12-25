@@ -1,13 +1,11 @@
 import { useRef, useEffect } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useGameStore } from '../store/useGameStore';
 
-interface CameraProps {
-  playerPosition: THREE.Vector3;
-}
-
-export default function Camera({ playerPosition }: CameraProps) {
+export default function Camera() {
   const { camera } = useThree();
+  const playerPosition = useGameStore((state) => state.playerPosition);
   const targetPosition = useRef(new THREE.Vector3());
   const lookAtTarget = useRef(new THREE.Vector3());
 

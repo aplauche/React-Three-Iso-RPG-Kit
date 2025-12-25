@@ -14,17 +14,11 @@ import {
 interface EntityManagerProps {
   entities: EntityDefinition[];
   gridDimensions: { rows: number; cols: number };
-  onCollect?: (entityId: string) => void;
-  onDoorEnter?: (entityId: string, targetLevel?: string) => void;
-  onEnemyHit?: (entityId: string) => void;
 }
 
 export default function EntityManager({
   entities,
-  gridDimensions,
-  onCollect,
-  onDoorEnter,
-  onEnemyHit
+  gridDimensions
 }: EntityManagerProps) {
 
   // Convert entity definitions to instances with 3D positions
@@ -63,25 +57,14 @@ export default function EntityManager({
       {entityInstances.map(entity => {
         const EntityComponent = getEntityComponent(entity.type);
 
-        // Create collision callback based on entity type
-        const handleCollide = () => {
-          if (entity.type === 'collectible' && onCollect) {
-            onCollect(entity.id);
-          } else if (entity.type === 'door' && onDoorEnter) {
-            const targetLevel = entity.metadata?.targetLevel;
-            onDoorEnter(entity.id, targetLevel);
-          } else if (entity.type === 'enemy' && onEnemyHit) {
-            onEnemyHit(entity.id);
-          }
-        };
-
         return (
           <EntityComponent
             key={entity.id}
+            id={entity.id}
             position={entity.position}
+            size={entity.size}
             gridPosition={entity.gridPosition}
             metadata={entity.metadata}
-            onCollide={handleCollide}
           />
         );
       })}
