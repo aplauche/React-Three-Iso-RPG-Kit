@@ -21,8 +21,8 @@ export default function Player({ gridDimensions, collidablePositions }: PlayerPr
   // Current logical grid position
   const playerCurrentLocation = useRef<GridPosition>(playerGridPosition);
 
-  // Movement progress: 1 = just started moving, 0 = arrived at destination
-  const [subGridMovement, setSubGridMovement] = useState(0);
+  // Movement progress: 1 = just started moving, 0 = arrived at destination (use ref for synchronous updates)
+  const subGridMovement = useRef(0);
 
   // Direction of current movement
   const moveDirection = useRef(null)
@@ -31,7 +31,7 @@ export default function Player({ gridDimensions, collidablePositions }: PlayerPr
   const keysHeld = useRef([]);
 
   // Movement speed (how much to decrement subGridMovement per frame)
-  const MOVEMENT_SPEED = 0.01;
+  const MOVEMENT_SPEED = 0.02;
 
   // Reset on level change
   // useEffect(() => {
@@ -95,7 +95,7 @@ export default function Player({ gridDimensions, collidablePositions }: PlayerPr
     if (!meshRef.current) return;
 
     // Check if we can start a new movement
-    if (subGridMovement === 0 && keysHeld.current.length > 0) {
+    if (subGridMovement.current === 0 && keysHeld.current.length > 0) {
       const direction = keysHeld.current[keysHeld.current.length - 1];
       const nextCell = getNextCell(playerCurrentLocation.current, direction);
 
@@ -103,16 +103,15 @@ export default function Player({ gridDimensions, collidablePositions }: PlayerPr
         playerCurrentLocation.current = nextCell;
         setPlayerGridPosition(nextCell);
         moveDirection.current = direction;
-        setSubGridMovement(1);
+        subGridMovement.current = 1;
       }
     }
 
     // Always decrement movement if we're moving
-    if (subGridMovement > 0) {
-      const newSubGridMovement = Math.max(0, subGridMovement - MOVEMENT_SPEED);
-      setSubGridMovement(newSubGridMovement);
+    if (subGridMovement.current > 0) {
+      subGridMovement.current = Math.max(0, subGridMovement.current - MOVEMENT_SPEED);
 
-      if (newSubGridMovement === 0) {
+      if (subGridMovement.current === 0) {
         moveDirection.current = null;
       }
     }
@@ -120,20 +119,20 @@ export default function Player({ gridDimensions, collidablePositions }: PlayerPr
     // Always update visual position
     const targetPos = gridToWorld(playerCurrentLocation.current, gridDimensions);
 
-    if (subGridMovement > 0 && moveDirection.current) {
+    if (subGridMovement.current > 0 && moveDirection.current) {
       const offset = new THREE.Vector3();
       switch (moveDirection.current) {
         case 'up':
-          offset.set(0, 0, -1).multiplyScalar(subGridMovement);
+          offset.set(0, 0, -1).multiplyScalar(subGridMovement.current);
           break;
         case 'down':
-          offset.set(0, 0, 1).multiplyScalar(subGridMovement);
+          offset.set(0, 0, 1).multiplyScalar(subGridMovement.current);
           break;
         case 'left':
-          offset.set(-1, 0, 0).multiplyScalar(subGridMovement);
+          offset.set(-1, 0, 0).multiplyScalar(subGridMovement.current);
           break;
         case 'right':
-          offset.set(1, 0, 0).multiplyScalar(subGridMovement);
+          offset.set(1, 0, 0).multiplyScalar(subGridMovement.current);
           break;
       }
       meshRef.current.position.copy(targetPos).sub(offset);
