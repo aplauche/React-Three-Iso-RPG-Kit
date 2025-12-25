@@ -6,16 +6,29 @@ import { checkCollisionWithObstacles, GameObject } from '../utils/collision';
 interface PlayerProps {
   obstacles: GameObject[];
   onPositionChange?: (position: THREE.Vector3) => void;
+  initialPosition?: THREE.Vector3;
 }
 
-export default function Player({ obstacles, onPositionChange }: PlayerProps) {
+export default function Player({
+  obstacles,
+  onPositionChange,
+  initialPosition = new THREE.Vector3(0, 0.5, 0)
+}: PlayerProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const keysPressed = useRef<Set<string>>(new Set());
   const velocity = useRef(new THREE.Vector3());
-  const position = useRef(new THREE.Vector3(0, 0.5, 0));
+  const position = useRef(initialPosition.clone());
 
   const SPEED = 0.1;
   const PLAYER_SIZE = new THREE.Vector3(1, 1, 1);
+
+  // Update position when initialPosition changes (level transition)
+  useEffect(() => {
+    position.current.copy(initialPosition);
+    if (meshRef.current) {
+      meshRef.current.position.copy(initialPosition);
+    }
+  }, [initialPosition]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -81,7 +94,7 @@ export default function Player({ obstacles, onPositionChange }: PlayerProps) {
   });
 
   return (
-    <mesh ref={meshRef} position={[0, 0.5, 0]} castShadow>
+    <mesh ref={meshRef} position={initialPosition.toArray()} castShadow>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial color="blue" />
     </mesh>

@@ -53,3 +53,44 @@ export function checkCollisionWithObstacles(
 
   return false;
 }
+
+/**
+ * Check collision with tiles and trigger callbacks
+ * Returns true if collision blocks movement
+ */
+export function checkCollisionWithTiles(
+  player: GameObject,
+  tiles: any[] // TileInstance[] - using any to avoid circular dependency
+): { blocked: boolean; collidedTiles: any[] } {
+  const playerBox = createAABB(player);
+  const collidedTiles: any[] = [];
+  let blocked = false;
+
+  for (const tile of tiles) {
+    const tileBox = createAABB({ position: tile.position, size: tile.size });
+
+    if (checkAABBCollision(playerBox, tileBox)) {
+      collidedTiles.push(tile);
+
+      // Trigger collision callback
+      if (tile.onCollide) {
+        const context = {
+          player: {
+            position: player.position.clone(),
+            size: player.size.clone(),
+          },
+          tile,
+          gridPosition: tile.gridPosition,
+        };
+        tile.onCollide(context);
+      }
+
+      // Check if this tile blocks movement
+      if (tile.isCollidable) {
+        blocked = true;
+      }
+    }
+  }
+
+  return { blocked, collidedTiles };
+}
