@@ -15,11 +15,13 @@ interface GameState {
   // Game state
   currentLevelId: string;
   score: number;
+  health: number;
   collectedEntities: Set<string>;
 
   // Actions
   setLevelId: (id: string) => void;
   addScore: (points: number) => void;
+  takeDamage: (damage: number) => void;
   collectEntity: (id: string) => void;
   resetCollectedEntities: () => void;
   transitionToLevel: (levelId: string) => void;
@@ -37,12 +39,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   // Initial game state
   currentLevelId: 'demo1',
   score: 0,
+  health: 100,
   collectedEntities: new Set(),
 
   // Actions
   setLevelId: (id) => set({ currentLevelId: id }),
 
   addScore: (points) => set((state) => ({ score: state.score + points })),
+
+  takeDamage: (damage) => set((state) => ({
+    health: Math.max(0, state.health - damage)
+  })),
 
   collectEntity: (id) => set((state) => ({
     collectedEntities: new Set(state.collectedEntities).add(id)

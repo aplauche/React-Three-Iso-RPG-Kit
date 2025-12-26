@@ -5,7 +5,7 @@ import Door from './Door';
 
 // Entity collision configurations (which entities block player movement)
 export const ENTITY_COLLIDABLE: Record<EntityType, boolean> = {
-  'enemy': true,         // Enemies block movement
+  'enemy': false,        // Enemies don't block movement (deal damage on contact)
   'collectible': false,  // Can walk through collectibles
   'door': false,         // Can walk through doors
 };

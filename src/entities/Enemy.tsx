@@ -8,8 +8,9 @@ export default function Enemy({ position, gridPosition, metadata }: EntityProps)
   const color = metadata?.color || 'darkred';
   const lastHitTime = useRef(0);
 
-  // Subscribe to player grid position
+  // Subscribe to player grid position and takeDamage action
   const playerGridPosition = useGameStore((state) => state.playerGridPosition);
+  const takeDamage = useGameStore((state) => state.takeDamage);
 
   useFrame((state) => {
     // Subtle bobbing animation
@@ -17,21 +18,21 @@ export default function Enemy({ position, gridPosition, metadata }: EntityProps)
       meshRef.current.position.y = position.y + Math.sin(state.clock.elapsedTime * 3) * 0.05;
     }
 
-    // Simple grid-based collision check
+    // Check if player is on the same tile as enemy
     const isPlayerOnEnemy =
       playerGridPosition.row === gridPosition.row &&
       playerGridPosition.col === gridPosition.col;
 
     if (isPlayerOnEnemy) {
-      // Debounce damage (prevent rapid repeated hits)
+      // Debounce damage - only apply every 1 second while colliding
       const now = Date.now();
       if (now - lastHitTime.current < 1000) return;
 
-      const damage = metadata?.damage || 1;
+      const damage = 10; // Fixed 10 damage per tick
       lastHitTime.current = now;
 
+      takeDamage(damage);
       console.log(`Hit by enemy! -${damage} health`);
-      // TODO: Implement health system in useGameStore
     }
   });
 

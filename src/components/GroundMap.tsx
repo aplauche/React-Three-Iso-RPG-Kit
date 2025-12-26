@@ -11,7 +11,7 @@ interface GroundMapProps {
 }
 
 // Texture loader component - only loads when needed
-function TexturedGroundTile({ position, groundType }: { position: THREE.Vector3; groundType: string }) {
+function TexturedGroundTile({ position, groundType, color }: { position: THREE.Vector3; groundType: string; color: string }) {
   const textures = useTexture({
     grass: '/src/assets/tile-textures/grass.jpg',
     water: '/src/assets/tile-textures/water.jpg',
@@ -23,10 +23,16 @@ function TexturedGroundTile({ position, groundType }: { position: THREE.Vector3;
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
   return (
-    <mesh position={position} receiveShadow>
-      <boxGeometry args={[1, 0.1, 1]} />
-      <meshStandardMaterial map={texture} />
-    </mesh>
+    <group position={position}>
+      <mesh receiveShadow>
+        <boxGeometry args={[1, 0.1, 1]} />
+        <meshStandardMaterial map={texture} />
+      </mesh>
+      <mesh position-y={-0.5} receiveShadow>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+    </group>
   );
 }
 
@@ -34,15 +40,21 @@ function TexturedGroundTile({ position, groundType }: { position: THREE.Vector3;
 function GroundTile({ position, color, groundType }: GroundTileProps & { groundType: string }) {
   // Use textured version for grass and water
   if (groundType === 'g' || groundType === 'w') {
-    return <TexturedGroundTile position={position} groundType={groundType} />;
+    return <TexturedGroundTile position={position} groundType={groundType} color={color} />;
   }
 
   // Use color for other tile types
   return (
-    <mesh position={position} receiveShadow>
-      <boxGeometry args={[1, 0.1, 1]} />
-      <meshStandardMaterial color={color} />
-    </mesh>
+     <group position={position}>
+      <mesh receiveShadow>
+        <boxGeometry args={[1, 0.1, 1]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      <mesh position-y={-0.5} receiveShadow>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+    </group>
   );
 }
 

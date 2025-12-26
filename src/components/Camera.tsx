@@ -15,7 +15,7 @@ export default function Camera() {
   useFrame(() => {
     // Camera offset - mostly front-facing with 25-degree offset to the right
     // Larger Z = more from the front, smaller X = less from the side
-    const offset = new THREE.Vector3(5, 10, 10);
+    const offset = new THREE.Vector3(2.5, 5, 5);
 
     // Lock camera to player visual position (no smoothing)
     camera.position.copy(playerVisualPosition).add(offset);

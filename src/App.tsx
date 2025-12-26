@@ -12,6 +12,7 @@ function App() {
   // Subscribe to Zustand store
   const currentLevelId = useGameStore((state) => state.currentLevelId);
   const score = useGameStore((state) => state.score);
+  const health = useGameStore((state) => state.health);
   const collectedEntities = useGameStore((state) => state.collectedEntities);
 
   const currentLevel = levels[currentLevelId];
@@ -45,6 +46,7 @@ function App() {
         pointerEvents: 'none'
       }}>
         <div>Level: {currentLevel.name}</div>
+        <div>Health: {health}</div>
         <div>Score: {score}</div>
         <div>Controls: WASD / Arrow Keys</div>
       </div>
@@ -88,7 +90,7 @@ function App() {
         />
 
         {/* Grid helper for debugging */}
-        <gridHelper args={[50, 50]} />
+        {/* <gridHelper args={[50, 50]} /> */}
       </Canvas>
     </div>
   );
