@@ -50,15 +50,19 @@ function App() {
       </div>
 
       <Canvas
+        key={currentLevelId}
         orthographic
         shadows
         camera={{ position: [8, 10, 8], zoom: 50 }}
+        gl={{ preserveDrawingBuffer: true }}
       >
-        {/* Lighting */}
-        <ambientLight intensity={0.5} />
+        <color attach="background" args={['#87CEEB']} />
+
+        {/* Lighting - consistent across all levels */}
+        <ambientLight intensity={0.8} />
         <directionalLight
           position={[10, 20, 10]}
-          intensity={1}
+          intensity={0.8}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}

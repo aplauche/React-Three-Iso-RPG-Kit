@@ -10,33 +10,38 @@ interface GroundMapProps {
   groundGrid: GroundType[][];
 }
 
-// Individual ground tile component
-function GroundTile({ position, color, groundType }: GroundTileProps & { groundType: string }) {
-  // Load textures for grass and water
-  const grassTexture = useTexture('/src/assets/tile-textures/grass.jpg');
-  const waterTexture = useTexture('/src/assets/tile-textures/water.jpg');
+// Texture loader component - only loads when needed
+function TexturedGroundTile({ position, groundType }: { position: THREE.Vector3; groundType: string }) {
+  const textures = useTexture({
+    grass: '/src/assets/tile-textures/grass.jpg',
+    water: '/src/assets/tile-textures/water.jpg',
+  });
 
-  // Determine which texture to use based on ground type
-  let texture: THREE.Texture | null = null;
-  if (groundType === 'g') {
-    texture = grassTexture;
-  } else if (groundType === 'w') {
-    texture = waterTexture;
-  }
+  const texture = groundType === 'g' ? textures.grass : textures.water;
 
-  // Configure texture wrapping and repeat if we have a texture
-  if (texture) {
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  }
+  // Configure texture wrapping
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
   return (
     <mesh position={position} receiveShadow>
       <boxGeometry args={[1, 0.1, 1]} />
-      {texture ? (
-        <meshStandardMaterial map={texture} />
-      ) : (
-        <meshStandardMaterial color={color} />
-      )}
+      <meshStandardMaterial map={texture} />
+    </mesh>
+  );
+}
+
+// Individual ground tile component
+function GroundTile({ position, color, groundType }: GroundTileProps & { groundType: string }) {
+  // Use textured version for grass and water
+  if (groundType === 'g' || groundType === 'w') {
+    return <TexturedGroundTile position={position} groundType={groundType} />;
+  }
+
+  // Use color for other tile types
+  return (
+    <mesh position={position} receiveShadow>
+      <boxGeometry args={[1, 0.1, 1]} />
+      <meshStandardMaterial color={color} />
     </mesh>
   );
 }
