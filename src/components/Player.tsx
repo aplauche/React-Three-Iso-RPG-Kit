@@ -1,21 +1,50 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
 import { gridToWorld } from '../utils/coordinateConversion';
 import { GridPosition } from '../types/entity';
+import { levels } from '../levels';
+import { isTileCollidable } from '../ground/groundColors';
+import { isEntityCollidable, generateEntityId } from '../entities';
 
 interface PlayerProps {
   gridDimensions: { rows: number; cols: number };
-  collidablePositions: Set<string>;
 }
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
-export default function Player({ gridDimensions, collidablePositions }: PlayerProps) {
+export default function Player({ gridDimensions }: PlayerProps) {
   const playerGridPosition = useGameStore((state) => state.playerGridPosition);
   const setPlayerGridPosition = useGameStore((state) => state.setPlayerGridPosition);
   const setPlayerVisualPosition = useGameStore((state) => state.setPlayerVisualPosition);
+  const currentLevelId = useGameStore((state) => state.currentLevelId);
+  const collectedEntities = useGameStore((state) => state.collectedEntities);
+
+  // Get the current level data
+  const currentLevel = levels[currentLevelId];
+  const groundGrid = currentLevel?.groundGrid;
+
+  // Build collidable positions from entities (filtering out collected ones)
+  const entityCollidablePositions = useMemo(() => {
+    if (!currentLevel) return new Set<string>();
+
+    const positions = new Set<string>();
+
+    currentLevel.entities.forEach(entityDef => {
+      // Skip collected entities
+      const entityId = generateEntityId(entityDef.type, entityDef.position.row, entityDef.position.col);
+      if (collectedEntities.has(entityId)) return;
+
+      // Add collidable entities to the set
+      if (isEntityCollidable(entityDef.type)) {
+        const posKey = `${entityDef.position.row},${entityDef.position.col}`;
+        positions.add(posKey);
+      }
+    });
+
+    return positions;
+  }, [currentLevel, collectedEntities]);
 
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -78,9 +107,20 @@ export default function Player({ gridDimensions, collidablePositions }: PlayerPr
   }, []);
 
   const isValidCell = (pos: GridPosition): boolean => {
+    // Check bounds
     if (pos.row < 0 || pos.row >= gridDimensions.rows) return false;
     if (pos.col < 0 || pos.col >= gridDimensions.cols) return false;
-    return !collidablePositions.has(`${pos.row},${pos.col}`);
+
+    // Check entity collisions
+    if (entityCollidablePositions.has(`${pos.row},${pos.col}`)) return false;
+
+    // Check tile collisions
+    if (groundGrid && groundGrid[pos.row]?.[pos.col]) {
+      const tileType = groundGrid[pos.row][pos.col];
+      if (isTileCollidable(tileType)) return false;
+    }
+
+    return true;
   };
 
   const getNextCell = (from: GridPosition, dir: Direction): GridPosition => {

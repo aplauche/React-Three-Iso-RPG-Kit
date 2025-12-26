@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { EntityDefinition } from '../types/level';
+import { EntityDefinition, GroundType } from '../types/level';
 import { EntityInstance } from '../types/entity';
 import { gridToWorld } from '../utils/coordinateConversion';
 import {
@@ -7,6 +7,7 @@ import {
   isEntityCollidable,
   generateEntityId
 } from '../entities';
+import { isTileCollidable } from '../ground/groundColors';
 
 interface EntityManagerProps {
   entities: EntityDefinition[];
@@ -65,7 +66,7 @@ export default function EntityManager({
 }
 
 /**
- * Helper hook to get collidable grid positions
+ * Helper hook to get collidable grid positions from entities
  * Returns a Set of "row,col" strings for collision checking
  */
 export function useCollidablePositions(
@@ -83,4 +84,27 @@ export function useCollidablePositions(
 
     return positions;
   }, [entities]);
+}
+
+/**
+ * Helper hook to get collidable grid positions from ground tiles
+ * Returns a Set of "row,col" strings for tiles that block movement
+ */
+export function useTileCollidablePositions(
+  groundGrid: GroundType[][]
+): Set<string> {
+  return useMemo(() => {
+    const positions = new Set<string>();
+
+    groundGrid.forEach((row, rowIndex) => {
+      row.forEach((tileType, colIndex) => {
+        if (isTileCollidable(tileType)) {
+          const posKey = `${rowIndex},${colIndex}`;
+          positions.add(posKey);
+        }
+      });
+    });
+
+    return positions;
+  }, [groundGrid]);
 }

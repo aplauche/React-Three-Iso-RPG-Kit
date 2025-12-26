@@ -5,22 +5,22 @@ export const demo1: LevelDefinition = {
   name: 'Garden Path',
   groundGrid: [
     ['s', 's', 's', 's', 's', 's', 's'],
-    ['s', 'g', 'g', 'g', 'g', 'g', 's'],
+    ['s', 'g', 'w', 'g', 'w', 'g', 's'],
     ['s', 'g', 'p', 'p', 'p', 'g', 's'],
     ['s', 'g', 'p', 'd', 'p', 'g', 's'],
     ['s', 'g', 'p', 'p', 'p', 'g', 's'],
-    ['s', 'g', 'g', 'g', 'g', 'g', 's'],
+    ['s', 'g', 'w', 'g', 'w', 'g', 's'],
     ['s', 's', 's', 's', 's', 's', 's'],
   ],
   entities: [
     {
       type: 'collectible',
-      position: { row: 1, col: 2 },
+      position: { row: 1, col: 3 },
       metadata: { points: 10 }
     },
     {
       type: 'collectible',
-      position: { row: 1, col: 4 },
+      position: { row: 1, col: 5 },
       metadata: { points: 10 }
     },
     {
@@ -48,3 +48,4 @@ export const demo1: LevelDefinition = {
 // g = grass (green)
 // p = path (plum)
 // d = dirt (brown)
+// w = water (blue) - BLOCKS MOVEMENT
