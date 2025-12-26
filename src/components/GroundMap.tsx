@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { useTexture } from '@react-three/drei';
 import { GroundType } from '../types/level';
 import { GroundTileProps } from '../types/ground';
 import { gridToWorld } from '../utils/coordinateConversion';
@@ -10,11 +11,32 @@ interface GroundMapProps {
 }
 
 // Individual ground tile component
-function GroundTile({ position, color }: GroundTileProps) {
+function GroundTile({ position, color, groundType }: GroundTileProps & { groundType: string }) {
+  // Load textures for grass and water
+  const grassTexture = useTexture('/src/assets/tile-textures/grass.jpg');
+  const waterTexture = useTexture('/src/assets/tile-textures/water.jpg');
+
+  // Determine which texture to use based on ground type
+  let texture: THREE.Texture | null = null;
+  if (groundType === 'g') {
+    texture = grassTexture;
+  } else if (groundType === 'w') {
+    texture = waterTexture;
+  }
+
+  // Configure texture wrapping and repeat if we have a texture
+  if (texture) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  }
+
   return (
     <mesh position={position} receiveShadow>
       <boxGeometry args={[1, 0.1, 1]} />
-      <meshStandardMaterial color={color} />
+      {texture ? (
+        <meshStandardMaterial map={texture} />
+      ) : (
+        <meshStandardMaterial color={color} />
+      )}
     </mesh>
   );
 }
@@ -22,7 +44,7 @@ function GroundTile({ position, color }: GroundTileProps) {
 // Main ground map component
 export default function GroundMap({ groundGrid }: GroundMapProps) {
   const groundTiles = useMemo(() => {
-    const tiles: Array<{ position: THREE.Vector3; color: string; key: string }> = [];
+    const tiles: Array<{ position: THREE.Vector3; color: string; key: string; groundType: string }> = [];
     const gridDimensions = {
       rows: groundGrid.length,
       cols: groundGrid[0]?.length || 0
@@ -42,6 +64,7 @@ export default function GroundMap({ groundGrid }: GroundMapProps) {
         tiles.push({
           position: worldPosition,
           color,
+          groundType,
           key: `ground-${rowIndex}-${colIndex}`
         });
       });
@@ -58,6 +81,7 @@ export default function GroundMap({ groundGrid }: GroundMapProps) {
           position={tile.position}
           gridPosition={{ row: 0, col: 0 }} // Not used for ground tiles
           color={tile.color}
+          groundType={tile.groundType}
         />
       ))}
     </>
