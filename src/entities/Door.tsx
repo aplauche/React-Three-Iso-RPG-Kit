@@ -4,8 +4,7 @@ import { EntityProps } from '../types/entity';
 import { useGameStore } from '../store/useGameStore';
 
 export default function Door({ position, gridPosition, metadata }: EntityProps) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const color = metadata?.color || 'purple';
+  const groupRef = useRef<THREE.Group>(null);
   const lastTransitionTime = useRef(0);
 
   // Subscribe to player grid position and transition action
@@ -14,9 +13,9 @@ export default function Door({ position, gridPosition, metadata }: EntityProps) 
 
   useFrame((state) => {
     // Gentle pulsing animation
-    if (meshRef.current) {
+    if (groupRef.current) {
       const scale = 1 + Math.sin(state.clock.elapsedTime * 2) * 0.1;
-      meshRef.current.scale.set(1, scale, 1);
+      groupRef.current.scale.set(1, scale, 1);
     }
 
     // Simple grid-based collision check
@@ -38,19 +37,21 @@ export default function Door({ position, gridPosition, metadata }: EntityProps) 
   });
 
   return (
-    <group position={position}>
-      <mesh ref={meshRef} castShadow>
-        <cylinderGeometry args={[0.4, 0.4, 0.2, 16]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={0.3}
-        />
+    <group position={position} ref={groupRef}>
+      {/* Bottom step */}
+      <mesh position={[0, 0.05, 0.15]} castShadow>
+        <boxGeometry args={[0.6, 0.1, 0.3]} />
+        <meshStandardMaterial color="#808080" />
       </mesh>
-      {/* Visual indicator it's a portal */}
-      <mesh position={[0, 0.3, 0]}>
-        <coneGeometry args={[0.2, 0.4, 8]} />
-        <meshStandardMaterial color={color} transparent opacity={0.6} />
+      {/* Middle step */}
+      <mesh position={[0, 0.15, 0]} castShadow>
+        <boxGeometry args={[0.6, 0.1, 0.3]} />
+        <meshStandardMaterial color="#808080" />
+      </mesh>
+      {/* Top step */}
+      <mesh position={[0, 0.25, -0.15]} castShadow>
+        <boxGeometry args={[0.6, 0.1, 0.3]} />
+        <meshStandardMaterial color="#808080" />
       </mesh>
     </group>
   );
