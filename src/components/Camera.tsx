@@ -13,8 +13,9 @@ export default function Camera() {
   }, [camera]);
 
   useFrame(() => {
-    // Isometric camera offset (looking down at an angle)
-    const offset = new THREE.Vector3(8, 10, 8);
+    // Camera offset - mostly front-facing with 25-degree offset to the right
+    // Larger Z = more from the front, smaller X = less from the side
+    const offset = new THREE.Vector3(5, 10, 10);
 
     // Lock camera to player visual position (no smoothing)
     camera.position.copy(playerVisualPosition).add(offset);
