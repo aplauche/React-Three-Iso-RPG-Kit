@@ -1,17 +1,10 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useTexture } from '@react-three/drei';
-import { GroundType } from '../types/level';
-import { GroundTileProps } from '../types/ground';
-import { gridToWorld } from '../utils/coordinateConversion';
 import { GROUND_COLORS, DEFAULT_GROUND_COLOR } from '../ground/groundColors';
 
-interface GroundMapProps {
-  groundGrid: GroundType[][];
-}
-
 // Texture loader component - only loads when needed
-function TexturedGroundTile({ position, groundType, color }: { position: THREE.Vector3; groundType: string; color: string }) {
+function TexturedGroundTile({ position, groundType, color }) {
   const textures = useTexture({
     grass: '/src/assets/tile-textures/grass.jpg',
     water: '/src/assets/tile-textures/water.jpg',
@@ -37,7 +30,7 @@ function TexturedGroundTile({ position, groundType, color }: { position: THREE.V
 }
 
 // Individual ground tile component
-function GroundTile({ position, color, groundType }: GroundTileProps & { groundType: string }) {
+function GroundTile({ position, color, groundType }) {
   // Use textured version for grass and water
   if (groundType === 'g' || groundType === 'w') {
     return <TexturedGroundTile position={position} groundType={groundType} color={color} />;
@@ -59,21 +52,14 @@ function GroundTile({ position, color, groundType }: GroundTileProps & { groundT
 }
 
 // Main ground map component
-export default function GroundMap({ groundGrid }: GroundMapProps) {
+export default function GroundMap({ groundGrid }) {
   const groundTiles = useMemo(() => {
-    const tiles: Array<{ position: THREE.Vector3; color: string; key: string; groundType: string }> = [];
-    const gridDimensions = {
-      rows: groundGrid.length,
-      cols: groundGrid[0]?.length || 0
-    };
+    const tiles = [];
 
     groundGrid.forEach((row, rowIndex) => {
       row.forEach((groundType, colIndex) => {
-        const gridPosition = { row: rowIndex, col: colIndex };
-        const worldPosition = gridToWorld(gridPosition, gridDimensions);
-
-        // Ground tiles sit on the ground (y=0.05 for height 0.1)
-        worldPosition.y = 0.05;
+        // Direct grid to world: col → x, row → z
+        const worldPosition = new THREE.Vector3(colIndex, 0.05, rowIndex);
 
         // Get color for this ground type
         const color = GROUND_COLORS[groundType] || DEFAULT_GROUND_COLOR;
@@ -96,7 +82,6 @@ export default function GroundMap({ groundGrid }: GroundMapProps) {
         <GroundTile
           key={tile.key}
           position={tile.position}
-          gridPosition={{ row: 0, col: 0 }} // Not used for ground tiles
           color={tile.color}
           groundType={tile.groundType}
         />

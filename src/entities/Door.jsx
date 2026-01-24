@@ -1,10 +1,9 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { EntityProps } from '../types/entity';
 import { useGameStore } from '../store/useGameStore';
 
-export default function Door({ position, gridPosition, metadata }: EntityProps) {
-  const groupRef = useRef<THREE.Group>(null);
+export default function Door({ position, gridPosition, metadata }) {
+  const groupRef = useRef(null);
   const lastTransitionTime = useRef(0);
 
   // Subscribe to player grid position and transition action

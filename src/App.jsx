@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import Player from './components/Player';
 import Camera from './components/Camera';
@@ -6,30 +6,20 @@ import GroundMap from './components/GroundMap';
 import EntityManager from './components/EntityManager';
 import { levels } from './levels';
 import { useGameStore } from './store/useGameStore';
-import { generateEntityId } from './entities';
 
 function App() {
   // Subscribe to Zustand store
   const currentLevelId = useGameStore((state) => state.currentLevelId);
   const score = useGameStore((state) => state.score);
   const health = useGameStore((state) => state.health);
-  const collectedEntities = useGameStore((state) => state.collectedEntities);
+  const initializeEntities = useGameStore((state) => state.initializeEntities);
 
   const currentLevel = levels[currentLevelId];
 
-  // Grid dimensions for coordinate conversion
-  const gridDimensions = useMemo(() => ({
-    rows: currentLevel.groundGrid.length,
-    cols: currentLevel.groundGrid[0]?.length || 0,
-  }), [currentLevel]);
-
-  // Filter out collected entities
-  const activeEntities = useMemo(() => {
-    return currentLevel.entities.filter(entity => {
-      const entityId = generateEntityId(entity.type, entity.position.row, entity.position.col);
-      return !collectedEntities.has(entityId);
-    });
-  }, [currentLevel.entities, collectedEntities]);
+  // Initialize entities when level changes
+  useEffect(() => {
+    initializeEntities(currentLevel.entities);
+  }, [currentLevelId, currentLevel.entities, initializeEntities]);
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
@@ -81,13 +71,10 @@ function App() {
         <GroundMap groundGrid={currentLevel.groundGrid} />
 
         {/* Player */}
-        <Player gridDimensions={gridDimensions} />
+        <Player />
 
         {/* Entities (game objects with collision/behavior) */}
-        <EntityManager
-          entities={activeEntities}
-          gridDimensions={gridDimensions}
-        />
+        <EntityManager />
 
         {/* Grid helper for debugging */}
         {/* <gridHelper args={[50, 50]} /> */}

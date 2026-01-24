@@ -1,6 +1,4 @@
-import { LevelDefinition } from '../types/level';
-
-export const demo2: LevelDefinition = {
+export const demo2 = {
   id: 'demo2',
   name: 'Stone Arena',
   groundGrid: [

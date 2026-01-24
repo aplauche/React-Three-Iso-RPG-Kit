@@ -2,56 +2,46 @@ import { useRef, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
-import { gridToWorld } from '../utils/coordinateConversion';
-import { GridPosition } from '../types/entity';
 import { levels } from '../levels';
 import { isTileCollidable } from '../ground/groundColors';
-import { isEntityCollidable, generateEntityId } from '../entities';
+import { isEntityCollidable } from '../entities';
 
-interface PlayerProps {
-  gridDimensions: { rows: number; cols: number };
-}
-
-type Direction = 'up' | 'down' | 'left' | 'right';
-
-export default function Player({ gridDimensions }: PlayerProps) {
+export default function Player() {
   const playerGridPosition = useGameStore((state) => state.playerGridPosition);
   const setPlayerGridPosition = useGameStore((state) => state.setPlayerGridPosition);
   const setPlayerVisualPosition = useGameStore((state) => state.setPlayerVisualPosition);
   const currentLevelId = useGameStore((state) => state.currentLevelId);
+  const entityPositions = useGameStore((state) => state.entityPositions);
   const collectedEntities = useGameStore((state) => state.collectedEntities);
 
-  // Get the current level data
+  // Get the current level data for ground grid
   const currentLevel = levels[currentLevelId];
   const groundGrid = currentLevel?.groundGrid;
 
-  // Build collidable positions from entities (filtering out collected ones)
+  // Build collidable positions from Zustand entity positions
   const entityCollidablePositions = useMemo(() => {
-    if (!currentLevel) return new Set<string>();
+    const positions = new Set();
 
-    const positions = new Set<string>();
-
-    currentLevel.entities.forEach(entityDef => {
+    Object.values(entityPositions).forEach(entity => {
       // Skip collected entities
-      const entityId = generateEntityId(entityDef.type, entityDef.position.row, entityDef.position.col);
-      if (collectedEntities.has(entityId)) return;
+      if (collectedEntities.has(entity.id)) return;
 
       // Add collidable entities to the set
-      if (isEntityCollidable(entityDef.type)) {
-        const posKey = `${entityDef.position.row},${entityDef.position.col}`;
+      if (isEntityCollidable(entity.type)) {
+        const posKey = `${entity.position.row},${entity.position.col}`;
         positions.add(posKey);
       }
     });
 
     return positions;
-  }, [currentLevel, collectedEntities]);
+  }, [entityPositions, collectedEntities]);
 
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef(null);
 
   // Current logical grid position
-  const playerCurrentLocation = useRef<GridPosition>(playerGridPosition);
+  const playerCurrentLocation = useRef(playerGridPosition);
 
-  // Movement progress: 1 = just started moving, 0 = arrived at destination (use ref for synchronous updates)
+  // Movement progress: 1 = just started moving, 0 = arrived at destination
   const subGridMovement = useRef(0);
 
   // Direction of current movement
@@ -63,39 +53,28 @@ export default function Player({ gridDimensions }: PlayerProps) {
   // Movement speed (how much to decrement subGridMovement per frame)
   const MOVEMENT_SPEED = 0.02;
 
-  // Reset on level change
-  // useEffect(() => {
-  //   playerCurrentLocation.current = playerGridPosition;
-  //   setSubGridMovement(0);
-  //   setMoveDirection([])
-  // }, [playerGridPosition]);
-
   // Keyboard handlers
   useEffect(() => {
-    const keyMap: Record<string, Direction> = {
+    const keyMap = {
       'arrowup': 'up', 'w': 'up',
       'arrowdown': 'down', 's': 'down',
       'arrowleft': 'left', 'a': 'left',
       'arrowright': 'right', 'd': 'right',
     };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e) => {
       const direction = keyMap[e.key.toLowerCase()];
       if (!direction) return;
 
       // Only process if not already held (prevents repeat)
       if (keysHeld.current.includes(direction)) return;
       keysHeld.current.push(direction)
-
-      console.log("new key: " + keysHeld.current)
-
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
+    const handleKeyUp = (e) => {
       const direction = keyMap[e.key.toLowerCase()];
       if (!direction) return;
       keysHeld.current = keysHeld.current.filter(val => val != direction)
-      console.log("removed key: " + keysHeld.current)
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -106,16 +85,17 @@ export default function Player({ gridDimensions }: PlayerProps) {
     };
   }, []);
 
-  const isValidCell = (pos: GridPosition): boolean => {
-    // Check bounds
-    if (pos.row < 0 || pos.row >= gridDimensions.rows) return false;
-    if (pos.col < 0 || pos.col >= gridDimensions.cols) return false;
+  const isValidCell = (pos) => {
+    // Check bounds using groundGrid dimensions
+    if (!groundGrid) return false;
+    if (pos.row < 0 || pos.row >= groundGrid.length) return false;
+    if (pos.col < 0 || pos.col >= groundGrid[0].length) return false;
 
-    // Check entity collisions
+    // Check entity collisions from Zustand
     if (entityCollidablePositions.has(`${pos.row},${pos.col}`)) return false;
 
     // Check tile collisions
-    if (groundGrid && groundGrid[pos.row]?.[pos.col]) {
+    if (groundGrid[pos.row]?.[pos.col]) {
       const tileType = groundGrid[pos.row][pos.col];
       if (isTileCollidable(tileType)) return false;
     }
@@ -123,7 +103,7 @@ export default function Player({ gridDimensions }: PlayerProps) {
     return true;
   };
 
-  const getNextCell = (from: GridPosition, dir: Direction): GridPosition => {
+  const getNextCell = (from, dir) => {
     switch (dir) {
       case 'up': return { row: from.row - 1, col: from.col };
       case 'down': return { row: from.row + 1, col: from.col };
@@ -157,8 +137,12 @@ export default function Player({ gridDimensions }: PlayerProps) {
       }
     }
 
-    // Always update visual position
-    const targetPos = gridToWorld(playerCurrentLocation.current, gridDimensions);
+    // Direct grid to world: col → x, row → z
+    const targetPos = new THREE.Vector3(
+      playerCurrentLocation.current.col,
+      0.5,
+      playerCurrentLocation.current.row
+    );
 
     if (subGridMovement.current > 0 && moveDirection.current) {
       const offset = new THREE.Vector3();

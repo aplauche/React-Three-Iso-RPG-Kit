@@ -1,15 +1,9 @@
 import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { EntityProps } from '../types/entity';
 import { useGameStore } from '../store/useGameStore';
 
-export default function Collectible({
-  id,
-  position,
-  gridPosition,
-  metadata
-}: EntityProps) {
-  const meshRef = useRef<THREE.Mesh>(null);
+export default function Collectible({ id, position, gridPosition, metadata }) {
+  const meshRef = useRef(null);
   const [collected, setCollected] = useState(false);
   const color = metadata?.color || 'gold';
 
